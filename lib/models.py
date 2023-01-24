@@ -35,7 +35,7 @@ class User(Base):
     id = Column(Integer(), primary_key=True)
 
     reviews = relationship('Review', backref='user')
-    games = association_proxy('reviews', 'games',
+    games = association_proxy('reviews', 'game',
         creator=lambda gm: Review(game=gm))
 
     def __repr__(self):

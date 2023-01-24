@@ -89,7 +89,7 @@ class User(Base):
     id = Column(Integer(), primary_key=True)
 
     reviews = relationship('Review', backref='user')
-    games = association_proxy('reviews', 'games',
+    games = association_proxy('reviews', 'game',
         creator=lambda gm: Review(game=gm))
 
     def __repr__(self):
@@ -237,36 +237,128 @@ associated with each review!
 
 ### Many-to-Many
 
-We've just added 
+We've just added one game and one user to each review. There are likely some
+users without reviews and possibly some games without reviews as well. This
+reflects real life, so we don't need to worry about it! Keep this in mind when
+writing your own seed files to make sure that any connections that need to exist
+(like a review to both a user and a game) are made.
+
+At this point, we just need to build the relationships between games and users.
+Since we used an association proxy inside of an association object model, we
+don't actually need to do anything!
+
+Run `python debug.py` to explore:
+
+```console
+ipdb> game = session.query(Game).first()
+ipdb> game.reviews
+=> [Review(id=410), Review(id=533), Review(id=594), Review(id=601), Review(id=695), Review(id=991)]
+ipdb> game.users
+=> [User(id=380), User(id=406), User(id=113), User(id=203), User(id=355), User(id=391)]
+```
+
+As expected, each game has a `reviews` attribute that contains a list of
+review records. Each game _also_ has a `users` attribute that contains a list
+of user records! The association proxy in our association object model triggered
+the population of this attribute as connections were made from reviews toward
+users and games. This worked for the `users` table as well:
+
+```console
+ipdb> user = session.query(User).all()[2]
+ipdb> user.reviews
+=> [Review(id=3), Review(id=855)]
+ipdb> user.games
+=> [Game(id=46), Game(id=18)]
+```
+
+Note that we needed to get the third user record here because the first two had
+no reviews. This reflects what we would expect to see in real data, but it's
+also something tricky to plan for in debugging.
 
 <details>
   <summary>
-    <em>What do we call the syntax that we used to create the <code>games</code>
-        variable?</em>
+    <em>How can we ensure that we find user records with reviews?</em>
   </summary>
 
-  <h3>List Interpretation.</h3>
-  <p>Interpretations allow us to create lists without using loops. They're a
-     powerful staple of Python code, so make sure you don't forget!</p>
+  <h3><code>users = session.query(User).filter(User.reviews)</code></h3>
+  <p>A mouthful, sure.</p>
+  <p>Remember that <code>filter()</code> evaluates logical statements- here,
+     we're looking for all users with reviews.</p>
 </details>
 <br/>
+
+You are never _required_ to use an association object model or any specific
+strategy for many-to-many relationships. Just know that you'll need a bit of
+custom code to populate those relationships if you don't use an association
+proxy.
 
 ***
 
 ## Conclusion
 
-In this lesson, we learned the importance of having a seed file along with our
-database migrations in order for ourselves and other developers to quickly set
-up the database with sample data. We also learned how to use the Faker library
-to quickly generate randomized seed data.
+In this lesson, you learned how to build a seed script for more complex data.
+You should now be able to build a database with relationships and populate it
+with realistic data.
+
+If you're still working some things out, don't worry! Your instructors and
+coaches are available to help you figure out any lingering uncertainties from
+this difficult module. You'll see some practice labs coming up to help prepare
+you for the Phase 3 Code Challenge.
+
+***
+
+## Solution Code
+
+```py
+#!/usr/bin/env python3
+
+from random import choice as rc
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from models import Game, Review, User
+
+engine = create_engine('sqlite:///seed_db.db')
+Session = sessionmaker(bind=engine)
+session = Session()
+
+def create_records():
+    games = [Game() for i in range(100)]
+    reviews = [Review() for i in range(1000)]
+    users = [User() for i in range(500)]
+    session.add_all(games + reviews + users)
+    session.commit()
+    return games, reviews, users
+
+def delete_records():
+    session.query(Game).delete()
+    session.query(Review).delete()
+    session.query(User).delete()
+    session.commit()
+
+def relate_one_to_many(games, reviews, users):
+    for review in reviews:
+        review.user = rc(users)
+        review.game = rc(games)
+    
+    session.add_all(reviews)
+    session.commit()
+    return games, reviews, users
+
+if __name__ == '__main__':
+    delete_records()
+    games, reviews, users = create_records()
+    games, reviews, users = relate_one_to_many(games, reviews, users)
+
+```
 
 ***
 
 ## Resources
 
 - [SQLAlchemy ORM Documentation][sqlaorm]
-- [Faker Documentation][faker]
+- [Basic Relationship Patterns - SQLAlchemy](https://docs.sqlalchemy.org/en/14/orm/basic_relationships.html)
 - [random — Generate pseudo-random numbers - Python](https://docs.python.org/3/library/random.html)
 
-[faker]: https://faker.readthedocs.io/en/master/index.html]
 [sqlaorm]: https://docs.sqlalchemy.org/en/14/orm/
