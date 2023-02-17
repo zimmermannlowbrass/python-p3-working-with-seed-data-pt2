@@ -1,4 +1,4 @@
-# Working with Seed Data, Part 2
+# Working with Seed Data Part 2
 
 ## Learning Goals
 
