@@ -146,8 +146,8 @@ if __name__ == '__main__':
 
 ```
 
-Here, we create a session object and use it to generate different nnumbers of
-records. It's usually a good idea to keep this realistic- there will probably
+Here, we create a session object and use it to generate different numbers of
+records. It's usually a good idea to keep this realistic - there will probably
 be more reviews than users and more users than games. With that in mind, we
 created 1000, 500, and 100, respectively.
 
